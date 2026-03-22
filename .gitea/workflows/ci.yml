@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "develop"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  trivy-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build images
+        run: |
+          docker build -t subscription-api:ci ./api1
+          docker build -t analytics-api:ci ./api2
+          docker build -t finance-frontend:ci ./frontend
+
+      - name: Trivy scan api1
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: subscription-api:ci
+          format: table
+          severity: MEDIUM,HIGH,CRITICAL
+          exit-code: 1
+          ignore-unfixed: true
+
+      - name: Trivy scan api2
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: analytics-api:ci
+          format: table
+          severity: MEDIUM,HIGH,CRITICAL
+          exit-code: 1
+          ignore-unfixed: true
+
+      - name: Trivy scan frontend
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: finance-frontend:ci
+          format: table
+          severity: MEDIUM,HIGH,CRITICAL
+          exit-code: 1
+          ignore-unfixed: true
+
+  docker-publish:
+    runs-on: ubuntu-latest
+    needs: trivy-scan
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push api1
+        uses: docker/build-push-action@v6
+        with:
+          context: ./api1
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/subscription-api:1.0.0
+
+      - name: Build and push api2
+        uses: docker/build-push-action@v6
+        with:
+          context: ./api2
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/analytics-api:1.0.0
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/finance-frontend:1.0.0

@@ -1,0 +1,119 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+    image: ${DOCKERHUB_USERNAME:-local}/finance-frontend:1.0.0
+    container_name: finance-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API1_URL=http://localhost:8001
+      - VITE_API2_URL=http://localhost:8002
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    depends_on:
+      api1:
+        condition: service_healthy
+      api2:
+        condition: service_healthy
+    networks:
+      - frontend_net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5173"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  api1:
+    build:
+      context: ./api1
+    image: ${DOCKERHUB_USERNAME:-local}/subscription-api:1.0.0
+    container_name: subscription-api
+    ports:
+      - "8001:8001"
+    environment:
+      - DATABASE_URL=${API1_DB_URL:-postgresql://study_user:study_pass@db1:5432/subscriptions_db}
+    depends_on:
+      db1:
+        condition: service_healthy
+    networks:
+      - frontend_net
+      - backend1_net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  api2:
+    build:
+      context: ./api2
+    image: ${DOCKERHUB_USERNAME:-local}/analytics-api:1.0.0
+    container_name: analytics-api
+    ports:
+      - "8002:8002"
+    environment:
+      - DATABASE_URL=${API2_DB_URL:-postgresql://study_user:study_pass@db2:5432/analytics_db}
+      - SUBSCRIPTION_API_URL=http://api1:8001
+    depends_on:
+      db2:
+        condition: service_healthy
+    networks:
+      - frontend_net
+      - backend2_net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  db1:
+    image: postgres:16-alpine
+    container_name: subscription-db
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-study_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-study_pass}
+      - POSTGRES_DB=${POSTGRES_DB_TASKS:-subscriptions_db}
+    volumes:
+      - db1_data:/var/lib/postgresql/data
+    networks:
+      - backend1_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-study_user} -d ${POSTGRES_DB_TASKS:-subscriptions_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db2:
+    image: postgres:16-alpine
+    container_name: analytics-db
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-study_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-study_pass}
+      - POSTGRES_DB=${POSTGRES_DB_RESOURCES:-analytics_db}
+    volumes:
+      - db2_data:/var/lib/postgresql/data
+    networks:
+      - backend2_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-study_user} -d ${POSTGRES_DB_RESOURCES:-analytics_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  frontend_net:
+    driver: bridge
+  backend1_net:
+    driver: bridge
+  backend2_net:
+    driver: bridge
+
+volumes:
+  db1_data:
+  db2_data:
+  frontend_node_modules:
