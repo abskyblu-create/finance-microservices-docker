@@ -111,6 +111,18 @@ def list_subscriptions(db: Session = Depends(get_db)) -> list[Subscription]:
     return db.query(Subscription).order_by(Subscription.id.desc()).all()
 
 
+@app.get("/subscriptions/upcoming-renewals", response_model=list[SubscriptionRead])
+def upcoming_renewals(db: Session = Depends(get_db)) -> list[Subscription]:
+    today = date.today()
+    return (
+        db.query(Subscription)
+        .filter(Subscription.renewal_date.is_not(None))
+        .filter(Subscription.renewal_date >= today)
+        .order_by(Subscription.renewal_date.asc())
+        .all()
+    )
+
+
 @app.get("/subscriptions/{subscription_id}", response_model=SubscriptionRead)
 def get_subscription(subscription_id: int, db: Session = Depends(get_db)) -> Subscription:
     subscription = db.get(Subscription, subscription_id)
@@ -155,18 +167,6 @@ def patch_subscription_status(subscription_id: int, new_status: SubscriptionStat
     db.commit()
     db.refresh(subscription)
     return subscription
-
-
-@app.get("/subscriptions/upcoming-renewals", response_model=list[SubscriptionRead])
-def upcoming_renewals(db: Session = Depends(get_db)) -> list[Subscription]:
-    today = date.today()
-    return (
-        db.query(Subscription)
-        .filter(Subscription.renewal_date.is_not(None))
-        .filter(Subscription.renewal_date >= today)
-        .order_by(Subscription.renewal_date.asc())
-        .all()
-    )
 
 
 @app.delete("/subscriptions/{subscription_id}", status_code=status.HTTP_204_NO_CONTENT)
