@@ -30,6 +30,22 @@ export default function App() {
   });
   const [budgetForm, setBudgetForm] = useState({ month: new Date().toISOString().slice(0, 7), target_amount: "" });
   const [error, setError] = useState("");
+  const [editingId, setEditingId] = useState(null);
+
+  function resetSubscriptionForm() {
+    setSubscriptionForm({
+      name: "",
+      provider: "",
+      category: "",
+      price: "",
+      currency: "EUR",
+      billing_cycle: "monthly",
+      renewal_date: "",
+      status: "active",
+      notes: "",
+    });
+    setEditingId(null);
+  }
 
   const dashboard = useMemo(() => {
     const active = subscriptions.filter((subscription) => subscription.status === "active").length;
@@ -73,24 +89,54 @@ export default function App() {
 
   async function submitSubscription(event) {
     event.preventDefault();
-    await taskApi.create({
-      ...subscriptionForm,
-      price: Number(subscriptionForm.price),
-      renewal_date: subscriptionForm.renewal_date || null,
-      notes: subscriptionForm.notes || null,
-    });
+    try {
+      setError("");
+      const payload = {
+        ...subscriptionForm,
+        price: Number(subscriptionForm.price),
+        renewal_date: subscriptionForm.renewal_date || null,
+        notes: subscriptionForm.notes || null,
+      };
+
+      if (editingId === null) {
+        await taskApi.create(payload);
+      } else {
+        await taskApi.update(editingId, payload);
+      }
+
+      resetSubscriptionForm();
+      await loadData();
+    } catch (err) {
+      setError(String(err.message || err));
+    }
+  }
+
+  function startEditing(subscription) {
+    setEditingId(subscription.id);
     setSubscriptionForm({
-      name: "",
-      provider: "",
-      category: "",
-      price: "",
-      currency: "EUR",
-      billing_cycle: "monthly",
-      renewal_date: "",
-      status: "active",
-      notes: "",
+      name: subscription.name,
+      provider: subscription.provider,
+      category: subscription.category,
+      price: String(subscription.price),
+      currency: subscription.currency,
+      billing_cycle: subscription.billing_cycle,
+      renewal_date: subscription.renewal_date || "",
+      status: subscription.status,
+      notes: subscription.notes || "",
     });
-    await loadData();
+  }
+
+  async function removeSubscription(id) {
+    try {
+      setError("");
+      await taskApi.remove(id);
+      if (editingId === id) {
+        resetSubscriptionForm();
+      }
+      await loadData();
+    } catch (err) {
+      setError(String(err.message || err));
+    }
   }
 
   async function submitBudget(event) {
@@ -178,7 +224,8 @@ export default function App() {
             value={subscriptionForm.notes}
             onChange={(event) => setSubscriptionForm({ ...subscriptionForm, notes: event.target.value })}
           />
-          <button type="submit">Add Subscription</button>
+          <button type="submit">{editingId === null ? "Add Subscription" : "Update Subscription"}</button>
+          {editingId !== null ? <button type="button" onClick={resetSubscriptionForm}>Cancel Edit</button> : null}
         </form>
         <ul className="list">
           {subscriptions.map((item) => (
@@ -188,7 +235,10 @@ export default function App() {
                 <p>{item.category} | EUR {Number(item.price).toFixed(2)} | {item.billing_cycle}</p>
                 <p>{item.status} | renews {item.renewal_date || "not set"}</p>
               </div>
-              <button onClick={() => taskApi.remove(item.id).then(loadData)}>Delete</button>
+              <div className="actions">
+                <button type="button" onClick={() => startEditing(item)}>Edit</button>
+                <button type="button" onClick={() => removeSubscription(item.id)}>Delete</button>
+              </div>
             </li>
           ))}
         </ul>

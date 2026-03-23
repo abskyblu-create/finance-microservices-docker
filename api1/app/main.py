@@ -125,6 +125,25 @@ def create_subscription(payload: SubscriptionCreate, db: Session = Depends(get_d
     return subscription
 
 
+@app.put("/subscriptions/{subscription_id}", response_model=SubscriptionRead)
+def update_subscription(
+    subscription_id: int,
+    payload: SubscriptionCreate,
+    db: Session = Depends(get_db),
+):
+    subscription = db.get(Subscription, subscription_id)
+    if subscription is None:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+
+    for field, value in payload.model_dump().items():
+        setattr(subscription, field, value)
+
+    db.add(subscription)
+    db.commit()
+    db.refresh(subscription)
+    return subscription
+
+
 @app.delete("/subscriptions/{subscription_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_subscription(subscription_id: int, db: Session = Depends(get_db)):
     subscription = db.get(Subscription, subscription_id)

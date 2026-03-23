@@ -10,11 +10,23 @@ This project is a Dockerized microservices application where users manually trac
 - `db1` dedicated database for subscriptions
 - `db2` dedicated database for analytics data
 
-```text
-Browser -> frontend -> api1 -> db1
-                   \-> api2 -> db2
-                           \-> api1
+```mermaid
+flowchart LR
+    Browser[Browser / Frontend UI] --> Frontend[frontend]
+    Frontend --> API1[api1 Subscription Manager]
+    Frontend --> API2[api2 Analytics Service]
+    API1 --> DB1[(db1 PostgreSQL)]
+    API2 --> DB2[(db2 PostgreSQL)]
+    API2 --> API1
 ```
+
+## Technology Stack
+
+- Frontend: React, Vite
+- Backend APIs: FastAPI, SQLAlchemy, Pydantic
+- Databases: PostgreSQL 16 Alpine
+- Containerization: Docker, Docker Compose
+- CI/CD and security: Gitea Actions, Trivy, Docker Hub
 
 ## Key Requirements Covered
 
@@ -52,19 +64,26 @@ Browser -> frontend -> api1 -> db1
 
 ## Quick Start
 
-1. Copy environment file:
+1. Clone the repository:
+
+```bash
+git clone <your-gitea-repository-url>
+cd team-03
+```
+
+2. Copy environment file:
 
 ```bash
 cp .env.example .env
 ```
 
-2. Start all services:
+3. Start all services:
 
 ```bash
 docker compose up --build
 ```
 
-3. Open services:
+4. Open services:
 
 - Frontend: `http://localhost:5173`
 - Subscription API Docs: `http://localhost:8001/docs`
@@ -77,7 +96,7 @@ docker compose up --build
 
 ## Verification Checklist
 
-- Create/update/delete subscriptions from frontend.
+- Create, update, and delete subscriptions from frontend.
 - Confirm dashboard totals and category breakdown update.
 - Restart stack and verify data still exists (named volumes).
 - Prove isolation:
@@ -97,6 +116,20 @@ docker compose exec api1 python -c "import socket; print(socket.gethostbyname('d
 docker compose exec api2 python -c "import socket; print(socket.gethostbyname('db1'))"
 docker volume ls
 ```
+
+## Demo
+
+### Frontend
+
+![Frontend dashboard](docs/demo/frontend-dashboard.png)
+
+### API 1 Docs
+
+![API 1 Swagger docs](docs/demo/api1-docs.png)
+
+### API 2 Docs
+
+![API 2 Swagger docs](docs/demo/api2-docs.png)
 
 ## Bonus-Ready Extensions
 

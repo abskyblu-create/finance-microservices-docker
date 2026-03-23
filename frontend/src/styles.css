@@ -102,6 +102,11 @@ button {
   margin: 0.2rem 0;
 }
 
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .error {
   color: var(--danger);
   font-weight: 600;
