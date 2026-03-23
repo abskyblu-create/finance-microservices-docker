@@ -1,8 +1,6 @@
 # AUTHORS
 
-- Team Member 1: Frontend Lead (subscription forms, analytics dashboard, API integration)
-- Team Member 2: Backend API 1 Lead (Subscription Manager service and PostgreSQL integration)
-- Team Member 3: Backend API 2 Lead (Analytics API service and PostgreSQL integration)
-- Team Member 4: DevOps Lead (Docker Compose isolation, CI/CD, Trivy, Docker Hub)
-
-Update names before submission.
+- **RAJESH Abhinand** - Frontend and core application architecture (React UI, finance microservices refactor, main project structure)
+- **Basheer Ahamed** - Backend services and integration (API updates, service communication, Docker Compose adjustments)
+- **Ankit** - Updated Docker setup (added frontend bind mount for hot reload, added `.dockerignore` files, updated `docker-compose.yml`, and removed the frontend root override for better runtime security)
+- **Mathis** - Documentation and presentation (project documentation, presentation structure, slide preparation, final delivery support)

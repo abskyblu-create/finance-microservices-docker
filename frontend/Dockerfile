@@ -9,6 +9,8 @@ RUN npm install
 
 COPY . .
 
+RUN mkdir -p /app/node_modules /app/.vite && chown -R app:app /app
+
 USER app
 
 EXPOSE 5173
