@@ -117,6 +117,7 @@ docker compose exec api2 python -c "import socket; print(socket.gethostbyname('d
 docker volume ls
 ```
 
+<<<<<<< HEAD
 ## Demo
 
 ### Frontend
@@ -130,6 +131,57 @@ docker volume ls
 ### API 2 Docs
 
 ![API 2 Swagger docs](docs/demo/api2-docs.png)
+=======
+## Security Hardening
+
+- Service containers run as non-root users in Dockerfiles.
+- Runtime privilege escalation is blocked with `no-new-privileges:true`.
+- Linux capabilities are dropped for app services with `cap_drop: [ALL]`.
+- Databases are not published to host ports.
+- Trivy image scanning is enforced in CI (`MEDIUM,HIGH,CRITICAL` => fail).
+
+## Healthcheck Verification Commands
+
+Use these commands after `docker compose up --build -d`:
+
+```bash
+docker compose ps
+docker inspect --format='{{.State.Health.Status}}' finance-frontend
+docker inspect --format='{{.State.Health.Status}}' subscription-api
+docker inspect --format='{{.State.Health.Status}}' analytics-api
+docker inspect --format='{{.State.Health.Status}}' subscription-db
+docker inspect --format='{{.State.Health.Status}}' analytics-db
+curl http://localhost:8001/health
+curl http://localhost:8002/health
+```
+
+Expected result:
+- All containers are `healthy`.
+- API health endpoints return JSON with `"status":"ok"`.
+
+## Security & Isolation Verification Commands
+
+```bash
+# databases are not published to host
+docker compose ps
+
+# API to own DB should work
+docker compose exec api1 python -c "import socket; print('db1=', socket.gethostbyname('db1'))"
+docker compose exec api2 python -c "import socket; print('db2=', socket.gethostbyname('db2'))"
+
+# cross-DB DNS resolution should fail by network isolation
+docker compose exec api1 python -c "import socket;\ntry: print(socket.gethostbyname('db2'))\nexcept Exception as e: print('blocked:', e.__class__.__name__)"
+docker compose exec api2 python -c "import socket;\ntry: print(socket.gethostbyname('db1'))\nexcept Exception as e: print('blocked:', e.__class__.__name__)"
+
+# runtime security options are present
+docker inspect --format='{{json .HostConfig.SecurityOpt}}' finance-frontend
+docker inspect --format='{{json .HostConfig.CapDrop}}' finance-frontend
+docker inspect --format='{{json .HostConfig.SecurityOpt}}' subscription-api
+docker inspect --format='{{json .HostConfig.CapDrop}}' subscription-api
+docker inspect --format='{{json .HostConfig.SecurityOpt}}' analytics-api
+docker inspect --format='{{json .HostConfig.CapDrop}}' analytics-api
+```
+>>>>>>> 4089c29cdd90f65edd6693c570055adf40a8011b
 
 ## Bonus-Ready Extensions
 
